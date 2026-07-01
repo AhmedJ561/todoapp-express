@@ -1,322 +1,552 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo App | Node.JS Express.JS SQLite</title>
-    <link rel="stylesheet" href="/styles.css" />
-    <link rel="stylesheet" href="/fanta.css" />
+    <title>NextGen Todo App | Express.js & SQLite</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
         integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Outfit', sans-serif;
+        }
+        /* Custom scrollbar for modern feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
 </head>
 
-<body>
-    <section id="auth">
-        <div>
-            <h2 className="sign-up-text">Login</h2>
-            <p>Create an account!</p>
-        </div>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col relative overflow-x-hidden selection:bg-purple-600 selection:text-white">
 
-        <p id="error" style="display: none;"></p>
-        <input id="emailInput" placeholder="Email" />
-        <input id="passwordInput" placeholder="********" type="password" />
-        <button id="authBtn" onclick="authenticate()">
-            Submit
-        </button>
-        <hr />
-        <div class="register-content">
-            <p>Don&apos;t have an account?</p>
-            <button onclick="toggleIsRegister()" id="registerBtn">Sign up</button>
-        </div>
-    </section>
-    <header style="display: none;">
-        <h1 class="text-gradient">You have 0 open tasks.</h1>
-    </header>
-    <nav style="display: none;" class="tab-container">
-        <button onclick="changeTab('All')" class="tab-button  selected-tab">
-            <h4>All <span>(0)</span></h4>
-        </button>
-        <button onclick="changeTab('Open')" class="tab-button  ">
-            <h4>Open <span>(0)</span></h4>
-        </button>
-        <button onclick="changeTab('Complete')" class="tab-button  ">
-            <h4>Complete <span>(0)</span></h4>
-        </button>
-        <hr />
-    </nav>
-    <main style="display: none;">
+    <!-- Ambient background glowing blobs for premium design -->
+    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-900/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-900/10 rounded-full blur-[120px] pointer-events-none"></div>
 
+    <!-- Toast Notification System -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full"></div>
 
-    </main>
-</body>
-<script>
-    let token = localStorage.getItem('token')
+    <!-- MAIN CONTAINER -->
+    <div class="flex-1 flex flex-col items-center justify-center p-4 md:p-8 z-10 w-full max-w-6xl mx-auto">
+        
+        <!-- ================= AUTH SECTION ================= -->
+        <section id="auth" class="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl transition-all duration-500 transform hover:scale-[1.01] hover:border-purple-500/20">
+            <div class="text-center mb-8">
+                <!-- App logo icon -->
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 shadow-lg shadow-purple-900/30 mb-4">
+                    <i class="fa-solid fa-list-check text-2xl text-white"></i>
+                </div>
+                <h2 id="authTitle" class="text-3xl font-extrabold bg-gradient-to-r from-purple-400 via-indigo-300 to-indigo-200 bg-clip-text text-transparent">Login</h2>
+                <p id="authSubtitle" class="text-slate-400 text-sm mt-2">Welcome back! Please enter your details.</p>
+            </div>
 
-    let isLoading = false
-    let isAuthenticating = false
-    let isRegistration = false
-    let selectedTab = 'All'
-    let todos = []
+            <!-- Form fields -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 ml-1">Username / Email</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                            <i class="fa-regular fa-envelope"></i>
+                        </span>
+                        <input id="emailInput" type="text" placeholder="name@domain.com" 
+                            class="w-full pl-10 pr-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all duration-300">
+                    </div>
+                </div>
 
-    const apiBase = '/'
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 ml-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input id="passwordInput" type="password" placeholder="••••••••" 
+                            class="w-full pl-10 pr-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all duration-300">
+                    </div>
+                </div>
 
-    // elements
-    const nav = document.querySelector('nav')
-    const header = document.querySelector('header')
-    const main = document.querySelector('main')
-    const navElements = document.querySelectorAll('.tab-button')
-    const authContent = document.getElementById('auth')
-    const textError = document.getElementById('error')
-    const email = document.getElementById('emailInput')
-    const password = document.getElementById('passwordInput')
-    const registerBtn = document.getElementById('registerBtn')
-    const authBtn = document.getElementById('authBtn')
-    const addTodoBtn = document.getElementById('addTodoBtn')
-    // const deleteBtn = document.getElementById('')
-    // const updateBtn = 
+                <button id="authBtn" onclick="authenticate()" 
+                    class="w-full mt-6 py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-purple-950/50 transition-all duration-300 transform active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2">
+                    <span>Submit</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </div>
 
-    // PAGE RENDERING LOGIC
-    async function showDashboard() {
-        nav.style.display = 'block'
-        header.style.display = 'flex'
-        main.style.display = 'flex'
-        authContent.style.display = 'none'
+            <!-- Toggle Register Link -->
+            <div class="mt-8 text-center border-t border-slate-850 pt-6">
+                <p id="toggleText" class="text-slate-400 text-sm">
+                    Don't have an account? 
+                    <button onclick="toggleIsRegister()" id="registerBtn" class="text-purple-400 hover:text-purple-300 font-semibold transition-all duration-300 cursor-pointer">Sign up</button>
+                </p>
+            </div>
+        </section>
 
-        await fetchTodos()
-    }
-
-    function updateHeaderText() {
-        const todosLength = todos.length
-        const newString = todos.length === 1 ?
-            `You have 1 open task.` :
-            `You have ${todosLength} open tasks.`
-        header.querySelector('h1').innerText = newString
-    }
-
-    function updateNavCount() {
-        navElements.forEach(ele => {
-            const btnText = ele.innerText.split(' ')[0]
-
-            // filter todos in here
-            const count = todos.filter(val => {
-                if (btnText === 'All') {
-                    return true
-                }
-                return btnText === 'Complete' ?
-                    val.completed :
-                    !val.completed
-            }).length
-
-            // target inside space and update value
-            ele.querySelector('span').innerText = `(${count})`
-        })
-    }
-
-    function changeTab(tab) {
-        selectedTab = tab
-        navElements.forEach(val => {
-            if (val.innerText.includes(tab)) {
-                val.classList.add('selected-tab')
-            } else {
-                val.classList.remove('selected-tab')
-            }
-        })
-        renderTodos()
-    }
-
-    function renderTodos() {
-        // need to add filtering logic in here
-
-        updateNavCount()
-        updateHeaderText()
-
-        let todoList = ``
-        todos.filter(val => {
-            return selectedTab === 'All' ? true : selectedTab === 'Complete' ? val.completed : !val.completed
-        }).forEach((todo, todoIndex) => {
-            const taskIndex = todo.id
-            todoList += `
-            <div class="card todo-item">
-                <p>${todo.task}</p>
-                <div class="todo-buttons">
-                    <button onclick="updateTodo(${taskIndex})" ${todo.completed ? 'disabled' : ''}>
-                        <h6>Done</h6>
-                    </button>
-                    <button onclick="deleteTodo(${taskIndex})">
-                        <h6>Delete</h6>
+        <!-- ================= DASHBOARD SECTION (TODOS) ================= -->
+        <section id="dashboard" class="w-full max-w-3xl hidden flex-col gap-6 w-full">
+            
+            <!-- Navbar Header -->
+            <header class="flex items-center justify-between bg-slate-900/40 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-4 md:p-6 shadow-xl">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-md">
+                        <i class="fa-solid fa-list-check text-lg text-white"></i>
+                    </div>
+                    <div>
+                        <h1 id="welcomeGreeting" class="text-xl font-bold bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">Task Center</h1>
+                        <p id="taskSummaryText" class="text-slate-400 text-xs mt-0.5">Fetching tasks...</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <!-- Logout button -->
+                    <button onclick="logout()" 
+                        class="flex items-center justify-center gap-2 bg-slate-950/60 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-400 hover:text-red-400 py-2.5 px-4 rounded-xl transition-all duration-300 cursor-pointer text-sm font-medium">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span class="hidden sm:inline">Logout</span>
                     </button>
                 </div>
+            </header>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-3 gap-3 md:gap-4">
+                <div class="bg-slate-900/30 border border-slate-800/60 rounded-2xl p-3 md:p-4 text-center">
+                    <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total</p>
+                    <h3 id="statTotal" class="text-xl md:text-3xl font-extrabold text-purple-400 mt-1">0</h3>
+                </div>
+                <div class="bg-slate-900/30 border border-slate-800/60 rounded-2xl p-3 md:p-4 text-center">
+                    <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider font-medium">Open</p>
+                    <h3 id="statOpen" class="text-xl md:text-3xl font-extrabold text-blue-400 mt-1">0</h3>
+                </div>
+                <div class="bg-slate-900/30 border border-slate-800/60 rounded-2xl p-3 md:p-4 text-center">
+                    <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Completed</p>
+                    <h3 id="statComplete" class="text-xl md:text-3xl font-extrabold text-emerald-400 mt-1">0</h3>
+                </div>
             </div>
-            `
-        })
-        todoList += `
-        <div class="input-container">
-            <input id="todoInput" placeholder="Add task" />
-            <button onclick="addTodo()">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-        </div>
-        `
-        main.innerHTML = todoList
-    }
 
-    // showDashboard()
+            <!-- Task Controller Panel -->
+            <div class="bg-slate-900/50 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
+                
+                <!-- Tab Selector Container -->
+                <div class="bg-slate-950/80 p-1.5 rounded-2xl flex gap-1 border border-slate-850/50">
+                    <button onclick="changeTab('All')" id="tabAll" class="tab-btn flex-1 text-center py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md">
+                        All <span id="countAll" class="text-xs opacity-80 font-normal">(0)</span>
+                    </button>
+                    <button onclick="changeTab('Open')" id="tabOpen" class="tab-btn flex-1 text-center py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-300 cursor-pointer">
+                        Open <span id="countOpen" class="text-xs opacity-80 font-normal">(0)</span>
+                    </button>
+                    <button onclick="changeTab('Complete')" id="tabComplete" class="tab-btn flex-1 text-center py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-300 cursor-pointer">
+                        Complete <span id="countComplete" class="text-xs opacity-80 font-normal">(0)</span>
+                    </button>
+                </div>
 
-    // AUTH LOGIC
+                <!-- Add Task Box -->
+                <div class="flex gap-2">
+                    <input id="todoInput" type="text" placeholder="Write a new task..." 
+                        class="flex-1 bg-slate-950/50 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 rounded-xl px-4 py-3.5 text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all duration-300"
+                        onkeydown="if(event.key === 'Enter') addTodo()">
+                    <button onclick="addTodo()" 
+                        class="bg-purple-600 hover:bg-purple-500 text-white px-5 rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg shadow-purple-950/30 cursor-pointer">
+                        <i class="fa-solid fa-plus text-lg"></i>
+                    </button>
+                </div>
 
-    async function toggleIsRegister() {
-        isRegistration = !isRegistration
-        registerBtn.innerText = isRegistration ? 'Sign in' : 'Sign up'
-        document.querySelector('#auth > div h2').innerText = isRegistration ? 'Sign Up' : 'Login'
-        document.querySelector('.register-content p').innerText = isRegistration ? 'Already have an account?' : 'Don\'t have an account?'
-        document.querySelector('.register-content button').innerText = isRegistration ? 'Sign in' : 'Sign up'
-    }
+                <!-- Dynamic Todo list -->
+                <div id="todoListContainer" class="space-y-3 min-h-[150px] max-h-[400px] overflow-y-auto pr-1">
+                    <!-- Injected by JavaScript -->
+                    <div class="flex flex-col items-center justify-center text-center py-8 text-slate-500">
+                        <i class="fa-regular fa-clipboard text-4xl mb-3 opacity-30"></i>
+                        <p class="text-sm">No tasks here yet.</p>
+                    </div>
+                </div>
 
-    async function authenticate() {
-        // access email and pass values
-        const emailVal = email.value
-        const passVal = password.value
+            </div>
 
-        // guard clauses... if authenticating, return
-        if (
-            isLoading ||
-            isAuthenticating ||
-            !emailVal ||
-            !passVal ||
-            passVal.length < 6 ||
-            !emailVal.includes('@')
-        ) { return }
+        </section>
 
-        // reset error and set isAuthenticating to true
-        error.style.display = 'none'
-        isAuthenticating = true
-        authBtn.innerText = 'Authenticating...'
+    </div>
 
-        try {
-            let data
+    <!-- Script Area -->
+    <script>
+        let token = localStorage.getItem('token');
+        let isLoading = false;
+        let isAuthenticating = false;
+        let isRegistration = false;
+        let selectedTab = 'All';
+        let todos = [];
+
+        const apiBase = '/';
+
+        // Elements
+        const authSection = document.getElementById('auth');
+        const dashboardSection = document.getElementById('dashboard');
+        const emailInput = document.getElementById('emailInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const authBtn = document.getElementById('authBtn');
+        const authTitle = document.getElementById('authTitle');
+        const authSubtitle = document.getElementById('authSubtitle');
+        const registerBtn = document.getElementById('registerBtn');
+        const toggleText = document.getElementById('toggleText');
+        const welcomeGreeting = document.getElementById('welcomeGreeting');
+        const taskSummaryText = document.getElementById('taskSummaryText');
+        const todoListContainer = document.getElementById('todoListContainer');
+        const todoInput = document.getElementById('todoInput');
+
+        // Toast Helper
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            // Define styling based on toast type
+            const bgClass = type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300';
+            const iconClass = type === 'error' ? 'fa-solid fa-circle-exclamation text-red-400' : 'fa-solid fa-circle-check text-emerald-400';
+            
+            toast.className = `flex items-center gap-3 p-4 rounded-xl border backdrop-blur-xl shadow-lg transition-all duration-300 transform translate-x-10 opacity-0 ${bgClass}`;
+            toast.innerHTML = `
+                <i class="${iconClass}"></i>
+                <div class="text-sm font-medium flex-1">${message}</div>
+                <button class="text-slate-400 hover:text-slate-200 transition-all duration-200 cursor-pointer ml-2" onclick="this.parentElement.remove()">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animation slide-in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-10', 'opacity-0');
+            }, 10);
+            
+            // Auto destroy
+            setTimeout(() => {
+                toast.classList.add('translate-x-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Toggle authentication view (Login / Register)
+        function toggleIsRegister() {
+            isRegistration = !isRegistration;
             if (isRegistration) {
-                // register an account
-                const response = await fetch(apiBase + 'auth/register', {
+                authTitle.innerText = 'Create Account';
+                authSubtitle.innerText = 'Join us and start organizing your tasks today!';
+                authBtn.querySelector('span').innerText = 'Register';
+                toggleText.innerHTML = `Already have an account? <button onclick="toggleIsRegister()" class="text-purple-400 hover:text-purple-300 font-semibold transition-all duration-300 cursor-pointer">Sign in</button>`;
+            } else {
+                authTitle.innerText = 'Login';
+                authSubtitle.innerText = 'Welcome back! Please enter your details.';
+                authBtn.querySelector('span').innerText = 'Login';
+                toggleText.innerHTML = `Don't have an account? <button onclick="toggleIsRegister()" class="text-purple-400 hover:text-purple-300 font-semibold transition-all duration-300 cursor-pointer">Sign up</button>`;
+            }
+        }
+
+        // Setup layouts
+        function renderLayout() {
+            if (token) {
+                authSection.classList.add('hidden');
+                dashboardSection.classList.remove('hidden');
+                dashboardSection.classList.add('flex');
+            } else {
+                authSection.classList.remove('hidden');
+                dashboardSection.classList.add('hidden');
+                dashboardSection.classList.remove('flex');
+            }
+        }
+
+        // Authenticate function
+        async function authenticate() {
+            const emailVal = emailInput.value.trim();
+            const passVal = passwordInput.value;
+
+            if (!emailVal || !passVal) {
+                showToast('Please enter both username and password.', 'error');
+                return;
+            }
+            if (passVal.length < 6) {
+                showToast('Password must be at least 6 characters long.', 'error');
+                return;
+            }
+
+            if (isAuthenticating) return;
+            isAuthenticating = true;
+            authBtn.disabled = true;
+            const originalBtnText = authBtn.innerHTML;
+            authBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Processing...</span>`;
+
+            try {
+                const endpoint = isRegistration ? 'auth/register' : 'auth/login';
+                const response = await fetch(apiBase + endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: emailVal, password: passVal })
-                })
-                data = await response.json()
-            } else {
-                // login an account
-                const response = await fetch(apiBase + 'auth/login', {
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Authentication failed.');
+                }
+
+                if (data.token) {
+                    token = data.token;
+                    localStorage.setItem('token', token);
+                    showToast(isRegistration ? 'Account created successfully!' : 'Signed in successfully!');
+                    emailInput.value = '';
+                    passwordInput.value = '';
+                    
+                    // Render UI & fetch data
+                    renderLayout();
+                    await fetchTodos();
+                } else {
+                    throw new Error('No authentication token returned.');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast(err.message, 'error');
+            } finally {
+                isAuthenticating = false;
+                authBtn.disabled = false;
+                authBtn.innerHTML = originalBtnText;
+            }
+        }
+
+        // Logout
+        function logout() {
+            token = null;
+            localStorage.removeItem('token');
+            todos = [];
+            renderLayout();
+            showToast('Logged out successfully.');
+        }
+
+        // Get Todos
+        async function fetchTodos() {
+            if (!token) return;
+            isLoading = true;
+            try {
+                const response = await fetch(apiBase + 'todos', {
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.status === 401) {
+                    // Token invalid or expired
+                    logout();
+                    showToast('Session expired. Please log in again.', 'error');
+                    return;
+                }
+
+                const todosData = await response.json();
+                todos = Array.isArray(todosData) ? todosData : [];
+                renderTodos();
+            } catch (error) {
+                console.error('Fetch todos error:', error);
+                showToast('Failed to fetch tasks.', 'error');
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // Create Todo
+        async function addTodo() {
+            const task = todoInput.value.trim();
+            if (!task) return;
+
+            try {
+                const response = await fetch(apiBase + 'todos', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: emailVal, password: passVal })
-                })
-                data = await response.json()
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({ task })
+                });
+
+                if (response.ok) {
+                    todoInput.value = '';
+                    showToast('Task added successfully.');
+                    await fetchTodos();
+                } else {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Failed to add task.');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast(error.message, 'error');
             }
-
-            if (data.token) {
-                token = data.token
-                localStorage.setItem('token', token)
-
-                // authenicating into loading
-                authBtn.innerText = 'Loading...'
-
-                // fetch todos
-                await fetchTodos()
-
-                // show dashboard
-                showDashboard()
-            } else {
-                throw Error('❌ Failed to authenticate...')
-            }
-
-        } catch (err) {
-            console.log(err.message)
-            error.innerText = err.message
-            error.style.display = 'block'
-        } finally {
-            authBtn.innerText = 'Submit'
-            isAuthenticating = false
         }
 
+        // Update Todo Complete status
+        async function updateTodo(id) {
+            const currentTodo = todos.find(val => val.id === id);
+            if (!currentTodo) return;
 
-    }
+            try {
+                const response = await fetch(`${apiBase}todos/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({ 
+                        task: currentTodo.task, 
+                        completed: 1 
+                    })
+                });
 
-    function logout() {
-        // wipe states and clear cached token
-    }
-
-    // CRUD LOGIC
-
-    async function fetchTodos() {
-        isLoading = true
-        const response = await fetch(apiBase + 'todos', {
-            headers: { 'Authorization': token }
-        })
-        const todosData = await response.json()
-        todos = todosData
-        isLoading = false
-        renderTodos()
-    }
-
-    async function updateTodo(index) {
-        // set task complete status to true
-        await fetch(apiBase + 'todos' + '/' + index, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify({ task: todos.find(val => val.id === index).task, completed: 1 })
-        })
-        fetchTodos()
-    }
-
-    async function deleteTodo(index) {
-        // set task complete status to true
-        await fetch(apiBase + 'todos' + '/' + index, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': token
-            },
-        })
-        fetchTodos()
-    }
-
-    async function addTodo() {
-        // have to access this val later as it's rendered with js
-        const todoInput = document.getElementById('todoInput')
-        const task = todoInput.value
-
-        if (!task) { return }
-
-        await fetch(apiBase + 'todos', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify({ task })
-        })
-        todoInput.value = ''
-        fetchTodos()
-    }
-
-    // UTILITY FUNCTIONS
-
-
-    // load page and read local storage for key
-
-    // default to login screen
-
-    // if is authenticated, show todo app
-    if (token) {
-        async function run() {
-            await fetchTodos()
-            showDashboard()
+                if (response.ok) {
+                    showToast('Task marked as completed.');
+                    await fetchTodos();
+                } else {
+                    throw new Error('Failed to update task.');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast(error.message, 'error');
+            }
         }
-        run()
-    }
-</script>
+
+        // Delete Todo
+        async function deleteTodo(id) {
+            try {
+                const response = await fetch(`${apiBase}todos/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+
+                if (response.ok) {
+                    showToast('Task deleted successfully.');
+                    await fetchTodos();
+                } else {
+                    throw new Error('Failed to delete task.');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Tabs
+        function changeTab(tab) {
+            selectedTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn flex-1 text-center py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-300 cursor-pointer";
+            });
+
+            const activeBtn = document.getElementById(`tab${tab}`);
+            if (activeBtn) {
+                activeBtn.className = "tab-btn flex-1 text-center py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md";
+            }
+
+            renderTodos();
+        }
+
+        // Update Stats & Counter Badges
+        function updateStats() {
+            const total = todos.length;
+            const open = todos.filter(t => !t.completed).length;
+            const complete = todos.filter(t => t.completed).length;
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statOpen').innerText = open;
+            document.getElementById('statComplete').innerText = complete;
+
+            document.getElementById('countAll').innerText = `(${total})`;
+            document.getElementById('countOpen').innerText = `(${open})`;
+            document.getElementById('countComplete').innerText = `(${complete})`;
+
+            // Header summary sentence update
+            welcomeGreeting.innerText = `Task Center`;
+            taskSummaryText.innerText = open === 0 
+                ? `Hooray! You have no pending tasks.` 
+                : `You have ${open} pending task${open > 1 ? 's' : ''} left.`;
+        }
+
+        // Render Todo lists
+        function renderTodos() {
+            updateStats();
+
+            const filteredTodos = todos.filter(val => {
+                if (selectedTab === 'All') return true;
+                if (selectedTab === 'Complete') return val.completed;
+                return !val.completed;
+            });
+
+            if (filteredTodos.length === 0) {
+                todoListContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center text-center py-10 text-slate-500">
+                        <i class="fa-regular fa-clipboard text-4xl mb-3 opacity-30"></i>
+                        <p class="text-sm">No ${selectedTab.toLowerCase()} tasks found.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            todoListContainer.innerHTML = filteredTodos.map(todo => {
+                const completeBtn = todo.completed 
+                    ? `<span class="flex items-center justify-center w-6 h-6 rounded-full border border-emerald-500 bg-emerald-500/10 text-emerald-400 cursor-default">
+                           <i class="fa-solid fa-check text-xs"></i>
+                       </span>`
+                    : `<button onclick="updateTodo(${todo.id})" class="flex items-center justify-center w-6 h-6 rounded-full border border-slate-700 hover:border-purple-500 text-transparent hover:text-purple-500 bg-slate-950 transition-all duration-300 cursor-pointer">
+                           <i class="fa-solid fa-check text-xs"></i>
+                       </button>`;
+
+                const textClass = todo.completed 
+                    ? `line-through text-slate-500 italic` 
+                    : `text-slate-200`;
+
+                return `
+                    <div class="flex items-center justify-between p-4 bg-slate-950/45 border border-slate-900 hover:border-slate-800 rounded-2xl transition-all duration-300 group">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            ${completeBtn}
+                            <span class="text-sm font-medium truncate ${textClass}">${escapeHtml(todo.task)}</span>
+                        </div>
+                        <button onclick="deleteTodo(${todo.id})" class="text-slate-500 hover:text-red-400 p-2 rounded-xl hover:bg-red-500/10 transition-all duration-300 cursor-pointer ml-2 opacity-80 md:opacity-0 group-hover:opacity-100">
+                            <i class="fa-regular fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // HTML escape helper
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Initialization
+        renderLayout();
+        if (token) {
+            fetchTodos();
+        }
+    </script>
+</body>
 
 </html>
